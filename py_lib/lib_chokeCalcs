@@ -1,0 +1,282 @@
+import math
+from units import u
+
+def gas_flow_subcritical(
+    Cv: float,
+    p1: float,
+    p2: float,
+    T: float,
+    R_spec: float,
+    xT: float = 0.7,
+):
+    """
+    IEC 60534 sub-critical (non-choked) gas flow in pure SI units.
+
+    Parameters
+    ----------
+    Cv      : valve coefficient [m^2]
+    p1      : upstream absolute pressure [Pa]
+    p2      : downstream absolute pressure [Pa]
+    T       : temperature [K]
+    R_spec  : specific gas constant [J/(kg·K)]
+    xT      : pressure recovery factor (0.6–0.9 typical)
+
+    Returns
+    -------
+    m_dot : mass flow rate [kg/s]
+    V_dot : volumetric flow rate at upstream conditions [m^3/s]
+    """
+
+    if p2 >= p1:
+        raise ValueError("Sub-critical flow requires p2 < p1.")
+
+    # Gas density at upstream state
+    rho1 = p1 / (R_spec * T)  # kg/m^3
+
+    # Pressure ratio term
+    delta_p = p1 - p2
+    pressure_ratio = delta_p / p1
+
+    # Expansion factor Y (IEC)
+    Y = 1.0 - 0.5 * (1.0 - xT) * pressure_ratio
+
+    # IEC 60534 sub-critical mass-flow equation (SI)
+    m_dot = Cv * Y * p1 * math.sqrt(
+        (2.0 / (R_spec * T)) * pressure_ratio
+    )
+
+    # Convert mass flow to volumetric flow at upstream conditions
+    V_dot = m_dot / rho1
+
+    return m_dot, V_dot
+
+
+def gas_flow_choked(
+    Cv: float,
+    p1: float,
+    T: float,
+    R_spec: float,
+):
+    """
+    IEC 60534 choked (sonic) gas flow in pure SI units.
+
+    Parameters
+    ----------
+    Cv      : valve coefficient [m^2]
+    p1      : upstream absolute pressure [Pa]
+    T       : temperature [K]
+    R_spec  : specific gas constant [J/(kg·K)]
+
+    Returns
+    -------
+    m_dot : mass flow rate [kg/s]
+    V_dot : volumetric flow rate at upstream conditions [m^3/s]
+    """
+
+    # Upstream density
+    rho1 = p1 / (R_spec * T)
+
+    # Sonic mass flow equation
+    m_dot = Cv * p1 * math.sqrt(1.0 / (R_spec * T))
+
+    # Convert to volumetric flow
+    V_dot = m_dot / rho1
+
+    return m_dot, V_dot
+
+
+def gas_flow(
+    Cv: float,
+    p1: float,
+    p2: float,
+    T: float,
+    R_spec: float,
+    choke_ratio: float = 0.5,
+    xT: float = 0.7,
+):
+    """
+    Decides whether flow is choked or sub-critical and calls correct equation.
+
+    Parameters
+    ----------
+    Cv      : valve coefficient [m^2]
+    p1      : upstream pressure [Pa]
+    p2      : downstream pressure [Pa]
+    T       : temperature [K]
+    R_spec  : specific gas constant [J/(kg·K)]
+    choke_ratio : typically 0.5 (p2/p1 <= 0.5 => sonic)
+    xT      : recovery factor (0.6–0.9 typical)
+
+    Returns
+    -------
+    regime : str ('choked' or 'subcritical')
+    m_dot  : kg/s
+    V_dot  : m^3/s
+    """
+
+    if p2 / p1 <= choke_ratio:
+        regime = "choked"
+        m_dot, V_dot = gas_flow_choked(Cv, p1, T, R_spec)
+    else:
+        regime = "subcritical"
+        m_dot, V_dot = gas_flow_subcritical(Cv, p1, p2, T, R_spec, xT)
+
+    return regime, m_dot, V_dot
+def required_Kv_gas_subcritical(
+    Qn: float,
+    p1: float,
+    p2: float,
+    T: float,
+    rho_n: float,
+    xT: float = 0.7,
+) -> float:
+    """
+    Required Kv for sub-critical gas flow using IEC 60534 (514-form).
+
+    Parameters
+    ----------
+    Qn     : desired normal volumetric flow [Nm^3/h]
+    p1     : upstream absolute pressure [Pa]
+    p2     : downstream absolute pressure [Pa]
+    T      : gas temperature [K]
+    rho_n  : gas density at normal conditions [kg/m^3]
+    xT     : pressure recovery factor of valve (0.6–0.9 typical)
+
+    Returns
+    -------
+    Kv     : IEC valve coefficient [m^3/h] (Kv)
+    """
+    if p2 >= p1:
+        raise ValueError("Sub-critical flow requires p2 < p1.")
+
+    # Convert pressures to bar (IEC 60534 uses bar abs)
+    p1_bar = p1 / 1e5
+    p2_bar = p2 / 1e5
+
+    dp_ratio = (p1_bar - p2_bar) / p1_bar
+
+    # Expansion factor Y (IEC style)
+    Y = 1.0 - 0.5 * (1.0 - xT) * dp_ratio
+
+    # IEC 60534 sub-critical gas equation, solved for Kv:
+    # Qn = 514 * Kv * Y * p1_bar * sqrt(rho_n / T) * sqrt((p1_bar - p2_bar)/p1_bar)
+    Kv = Qn / (
+        514.0
+        * Y
+        * p1_bar
+        * math.sqrt(rho_n / T)
+        * math.sqrt(dp_ratio)
+    )
+
+    return Kv
+
+
+def required_Kv_gas_choked(
+    Qn: float,
+    p1: float,
+    T: float,
+    rho_n: float,
+) -> float:
+    """
+    Required Kv for choked (sonic) gas flow using IEC 60534 (257-form).
+
+    Parameters
+    ----------
+    Qn     : desired normal volumetric flow [Nm^3/h]
+    p1     : upstream absolute pressure [Pa]
+    T      : gas temperature [K]
+    rho_n  : gas density at normal conditions [kg/m^3]
+
+    Returns
+    -------
+    Kv     : IEC valve coefficient [m^3/h] (Kv)
+    """
+    p1_bar = p1 / 1e5
+
+    # IEC 60534 choked gas equation solved for Kv:
+    # Qn = 257 * Kv * p1_bar * sqrt(rho_n / T)
+    Kv = Qn / (257.0 * p1_bar * math.sqrt(rho_n / T))
+
+    return Kv
+
+
+def required_Kv_gas(
+    Qn: float,
+    p1: float,
+    p2: float,
+    T: float,
+    rho_n: float,
+    xT: float = 0.7,
+    choke_ratio: float = 0.5,
+):
+    """
+    Convenience wrapper: decides regime and returns Kv using IEC 514/257.
+
+    Parameters
+    ----------
+    Qn          : desired normal volumetric flow [Nm^3/h]
+    p1          : upstream absolute pressure [Pa]
+    p2          : downstream absolute pressure [Pa]
+    T           : temperature [K]
+    rho_n       : gas density at normal conditions [kg/m^3]
+    xT          : pressure recovery factor (0.6–0.9 typical)
+    choke_ratio : p2/p1 threshold for sonic flow (≈0.5 typical)
+
+    Returns
+    -------
+    regime : 'choked' or 'subcritical'
+    Kv     : IEC valve coefficient [m^3/h] (Kv)
+    """
+    if p2 / p1 <= choke_ratio:
+        regime = "choked"
+        Kv = required_Kv_gas_choked(Qn, p1, T, rho_n)
+    else:
+        regime = "subcritical"
+        Kv = required_Kv_gas_subcritical(Qn, p1, p2, T, rho_n, xT=xT)
+
+    return regime, Kv
+
+
+if __name__ == "__main__":
+    # CO2 molar mass
+    molar_mass_co2 = 0.04401  # kg/mol
+    R_universal = 8.314462618
+    R_CO2 = R_universal / molar_mass_co2
+
+    Cv = 1e-6       # m^2 (example valve)
+    p1 = 5e5        # Pa (5 bar abs)
+    p2 = 3e5        # Pa (2 bar abs)
+    T  = 293.15     # K (20°C)
+
+    regime, m_dot, V_dot = gas_flow(Cv, p1, p2, T, R_CO2)
+   
+    print("\n\n============================================")
+        
+    print("Regime:", regime)
+    print("Mass flow [kg/s]:", m_dot)
+    print("Volume flow [m^3/s]:", V_dot)
+    
+    print("\n...calculate Kv")
+    Qn = 0.3  # [Nm^3/h]
+
+  
+
+    Qn = 5*u.lpm      # [Nm^3/h]
+    print("Qn=",Qn)
+
+
+    # Pressures
+    p1 = 5e5   # 5 bar abs
+    p2 = 3e5   # 2 bar abs
+
+    # Temperature
+    T = 293.15  # K (20 °C)
+
+    # CO2 density at normal conditions
+    rho_n = 1.98  # kg/m^3 approx
+
+    regime, Kv = required_Kv_gas(Qn, p1, p2, T, rho_n)
+
+    print("Regime:", regime)
+    print("Required Kv:", Kv)
+

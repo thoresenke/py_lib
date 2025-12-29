@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CO2 Valve Controller</title>
+  <style>
+    :root {
+      --primary: #0846a3;
+      --bg: #f6f8fb;
+      --card: #ffffff;
+      --border: #dfe3ec;
+      --text: #1f2b3d;
+      --muted: #5c677d;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    header {
+      background: linear-gradient(135deg, #1257be, #0ab6ff);
+      color: #fff;
+      padding: 18px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+
+    header img {
+      height: 44px;
+      width: auto;
+    }
+
+    header .titles {
+      display: flex;
+      flex-direction: column;
+    }
+
+    header small {
+      color: #e9f4ff;
+      letter-spacing: 0.5px;
+    }
+
+    main {
+      max-width: 960px;
+      margin: 24px auto 32px;
+      padding: 0 16px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 18px;
+      box-shadow: 0 2px 6px rgba(31, 43, 61, 0.06);
+    }
+
+    .panel h3 {
+      margin: 0 0 8px;
+      font-size: 1.05rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 12px 0;
+    }
+
+    .grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .grid.two-col {
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    }
+
+    label {
+      font-weight: 600;
+      color: var(--muted);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    input[type="number"] {
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      font-size: 1rem;
+      width: 100%;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: flex-start;
+      align-items: center;
+    }
+
+    button {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      letter-spacing: 0.2px;
+      box-shadow: 0 2px 6px rgba(13, 110, 253, 0.25);
+      transition: transform 0.05s ease, box-shadow 0.1s ease;
+    }
+
+    button.secondary { background: #6c757d; box-shadow: 0 2px 6px rgba(108, 117, 125, 0.25); }
+    button:active { transform: translateY(1px); box-shadow: 0 1px 4px rgba(0,0,0,0.15); }
+
+    #status {
+      background: #f0f5ff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-family: 'SFMono-Regular', Consolas, monospace;
+      white-space: pre-line;
+    }
+
+    .badge {
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      display: inline-block;
+      margin-left: 6px;
+    }
+
+    .badge.ok { background: #e6f4ea; color: #0f6c2f; }
+    .badge.warn { background: #fff4e5; color: #b15b00; }
+
+    footer {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin: 8px 0 20px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <img src="https://www.akvagroup.com/getfile.php/1320620-1730155337/Bildegalleri/Media%20side/AKVAgroup_logo_2line_black.png" alt="Akva logo">
+    <div class="titles">
+      <strong>CO2 Flow Controller</strong>
+      <small>Professional control surface</small>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <h3>Configuration</h3>
+      <div class="divider"></div>
+      <div class="grid two-col">
+        <label>Start %
+          <input id="start" type="number" min="0" max="100" step="1" placeholder="e.g. 25">
+        </label>
+        <label>End %
+          <input id="end" type="number" min="0" max="100" step="1" placeholder="e.g. 75">
+        </label>
+        <label>Duration (sec)
+          <input id="duration" type="number" min="1" step="1" placeholder="e.g. 300">
+        </label>
+      </div>
+      <div class="actions" style="margin-top: 10px;">
+        <button onclick="saveConfig()">Save Configuration</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>Run Control</h3>
+      <div class="divider"></div>
+      <div class="actions">
+        <button onclick="startSequence()">Start Sequence</button>
+        <button class="secondary" onclick="abortSequence()">Abort</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>Timing Adjustment</h3>
+      <div class="divider"></div>
+      <div class="grid two-col">
+        <label>Adjust remaining time (sec, +/-)
+          <input id="adjust" type="number" step="1" value="10">
+        </label>
+        <div class="actions">
+          <button onclick="adjustTime(1)">Increase</button>
+          <button class="secondary" onclick="adjustTime(-1)">Decrease</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3>Status</h3>
+      <div class="divider"></div>
+      <div id="status">Loading...</div>
+    </section>
+  </main>
+
+  <footer>Powered by Akva controls</footer>
