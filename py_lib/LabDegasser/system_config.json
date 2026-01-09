@@ -1,0 +1,45 @@
+{
+    "ambient": {
+        "temperature_C": 20.0
+    },
+    "blower": {
+        "flow_rate_m3hr": 300.0,
+        "pressure_rise_mbar": 150.0,
+        "efficiency": 0.6
+    },
+    "diffuser": {
+        "num_holes": 100,
+        "hole_diameter_mm": 3.0,
+        "water_depth_m": 1.5,
+        "discharge_coeff": 0.62
+    },
+    "tanks": {
+        "volume_m3": 2.0,
+        "count": 2,
+        "surface_area_per_tank_m2": 6.0,
+        "h_conv": 5.0
+    },
+    "pipes": {
+        "length_m": 5.0,
+        "diameter_mm": 10.0,
+        "emissivity": 0.85,
+        "h_conv": 10.0
+    },
+    "pump": {
+        "flow_rate_lpm": 10.0,
+        "power_W": 100.0
+    },
+    "chiller": {
+        "chiller_params": {
+            "UA_evap": 1500.0,
+            "UA_cond": 3000.0,
+            "eta_carnot": 0.4,
+            "lift_min": 10.0,
+            "Tevap_min": 273.65,
+            "Tcond_max": 343.15,
+            "Qev_max": 5000.0
+        },
+        "pel_W": 1250.0,
+        "enabled": true
+    }
+}

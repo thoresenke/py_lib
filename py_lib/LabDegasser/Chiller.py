@@ -8,7 +8,8 @@ except ImportError:
     # Fallback if running as script from different dir without path setup
     import sys
     import os
-    sys.path.append(os.path.dirname(__file__))
+    # Add parent directory to path to find matLib
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
     from matLib import mCol, u
 
 CP_WATER = 4186.0  # J/(kg*K)
